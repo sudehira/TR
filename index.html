@@ -180,11 +180,10 @@ input.ci[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 
 <script>
 // ═══════════════════════════════════════════════════
-// ★ ここに Supabase の値を設定してください / Set your Supabase credentials here
+// ★ Supabase credentials
 // ═══════════════════════════════════════════════════
-const SUPABASE_URL      = https://qttvghfhzzqtqcnjwgbw.supabase.co
-const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dHZnaGZoenpxdHFjbmp3Z2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjMzOTksImV4cCI6MjA5NjczOTM5OX0.uGJCJ1lDgA0QskwySaULmHxvVCRcs4NHGVD2WLJD_8U
-// ═══════════════════════════════════════════════════
+const SUPABASE_URL      = 'https://qttvghfhzzqtqcnjwgbw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dHZnaGZoenpxdHFjbmp3Z2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjMzOTksImV4cCI6MjA5NjczOTM5OX0.uGJCJ1lDgA0QskwySaULmHxvVCRcs4NHGVD2WLJD_8U';
 
 // CONFIG (fallback: UI入力 / UI input)
 const CFG_KEY = 'tr_supabase_cfg';
@@ -224,7 +223,7 @@ function initSupabase(url, key) {
 // ═══════════════════════════════════════════════════
 // DATA MODEL
 // ═══════════════════════════════════════════════════
-let weeks = []; // local cache
+let weeks = [];
 
 function dbToWeek(row) {
   return {
@@ -361,7 +360,6 @@ function renderTable() {
 
   let h = '<div class="table-wrapper"><table><thead>';
 
-  // Week number row
   h += '<tr>';
   h += `<th class="s0 wh" rowspan="2">Cat.</th>`;
   h += `<th class="s1 wh" rowspan="2" style="left:58px">指標 / Metric</th>`;
@@ -371,7 +369,6 @@ function renderTable() {
   });
   h += '</tr>';
 
-  // Date row
   h += '<tr>';
   weeks.forEach((w, wi) => {
     const cur = wi === lastWi ? ' cur-wk' : '';
@@ -380,7 +377,6 @@ function renderTable() {
   h += '</tr>';
   h += '</thead><tbody>';
 
-  // Part & Full sections
   ['part','full'].forEach(sec => {
     METRICS.forEach((m, ri) => {
       h += '<tr>';
@@ -398,7 +394,8 @@ function renderTable() {
           const v = fmt(w[sec][m.key]);
           h += `<td class="dc${cur}"><input class="ci" type="number" min="0" value="${v}"
             data-wi="${wi}" data-sec="${sec}" data-key="${m.key}"
-            onchange="onCell(this)" oninput="onCell(this)"></td>`;
+            onchange="onCell(this)" oninput="onCell(this)"
+            onkeydown="onEnter(event,this)"></td>`;
         }
       });
       h += '</tr>';
@@ -406,7 +403,6 @@ function renderTable() {
     h += `<tr class="sep"><td colspan="${n+2}"></td></tr>`;
   });
 
-  // Action Plan header
   h += '<tr>';
   h += `<td class="s0 sl sl-ap" rowspan="${AP_LABELS.length + 1}" style="left:0">Action<br>Plan</td>`;
   h += `<td class="s1 dh" style="left:58px;text-align:left;padding-left:8px">Date</td>`;
@@ -424,13 +420,29 @@ function renderTable() {
       const v = (w.actionPlan[li] || '').replace(/"/g,'&quot;');
       h += `<td class="ac${cur}"><input class="ci" type="text" value="${v}"
         data-wi="${wi}" data-ap="${li}"
-        onchange="onAp(this)" oninput="onAp(this)"></td>`;
+        onchange="onAp(this)" oninput="onAp(this)"
+        onkeydown="onEnter(event,this)"></td>`;
     });
     h += '</tr>';
   });
 
   h += '</tbody></table></div>';
   body.innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════
+// KEYBOARD NAVIGATION
+// ═══════════════════════════════════════════════════
+function onEnter(e, input) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const wi = input.dataset.wi;
+  const all = Array.from(document.querySelectorAll(`input.ci[data-wi="${wi}"]`));
+  const idx = all.indexOf(input);
+  if (idx >= 0 && idx < all.length - 1) {
+    all[idx + 1].focus();
+    all[idx + 1].select();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -442,7 +454,6 @@ function onCell(input) {
   const key = input.dataset.key;
   const v = input.value === '' ? '' : parseFloat(input.value);
   weeks[wi][sec][key] = v;
-  // Update net cell
   const net = calcNet(weeks[wi][sec]);
   const nc = document.querySelector(`td.cc[data-wi="${wi}"][data-sec="${sec}"]`);
   if (nc) nc.textContent = net === null ? '' : net;
@@ -463,7 +474,6 @@ function exportExcel() {
   const wb = XLSX.utils.book_new();
   const aoa = [];
 
-  // Header rows
   aoa.push(['', '', ...weeks.map(w => `W${w.weekNum}`)]);
   aoa.push(['', '', ...weeks.map(w => w.date)]);
   aoa.push([]);
@@ -479,7 +489,6 @@ function exportExcel() {
     aoa.push([]);
   });
 
-  // Action Plan
   aoa.push(['', 'Action Plan', ...weeks.map(w => w.date)]);
   AP_LABELS.forEach((lbl, li) => {
     aoa.push(['', lbl, ...weeks.map(w => w.actionPlan[li] || '')]);
@@ -619,7 +628,6 @@ function flashSaved() {
 // INIT
 // ═══════════════════════════════════════════════════
 (function init() {
-  // ① 定数が設定済みならそのまま起動
   const hardcoded = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
   if (hardcoded) {
     document.getElementById('setup-modal').style.display = 'none';
@@ -627,7 +635,6 @@ function flashSaved() {
     loadData();
     return;
   }
-  // ② localStorage に保存済みの場合
   const cfg = getConfig();
   if (cfg.url && cfg.key) {
     document.getElementById('setup-modal').style.display = 'none';
@@ -636,7 +643,6 @@ function flashSaved() {
   } else {
     document.getElementById('cfg-url').value = '';
     document.getElementById('cfg-key').value = '';
-    // モーダル表示のまま
   }
 })();
 </script>
