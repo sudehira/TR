@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TR Weekly Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Meiryo UI',Meiryo,sans-serif;font-size:13px;background:#F0F2F5;color:#1a1a1a}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:10px;padding:28px 32px;width:440px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-box h2{font-size:16px;color:#1E3A5F;margin-bottom:6px}
+.modal-box p{font-size:12px;color:#6B7280;margin-bottom:18px}
+.modal-box label{display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:4px;margin-top:12px}
+.modal-box input{width:100%;border:1px solid #D1D5DB;border-radius:5px;padding:7px 10px;font-size:12px;font-family:inherit;outline:none}
+.modal-box input:focus{border-color:#1E3A5F}
+.modal-err{color:#dc2626;font-size:11px;margin-top:8px;min-height:16px}
+
+/* ── HEADER ── */
+header{background:#1E3A5F;color:#fff;display:flex;align-items:center;padding:0 20px;height:50px;position:sticky;top:0;z-index:100;gap:4px}
+header h1{font-size:15px;font-weight:700;margin-right:24px;white-space:nowrap}
+.tab-btn{background:none;border:none;color:rgba(255,255,255,.65);font-family:inherit;font-size:13px;padding:0 14px;height:50px;cursor:pointer;border-bottom:3px solid transparent;transition:.15s}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{color:#fff;border-bottom-color:#60A5FA}
+.header-spacer{flex:1}
+.save-badge{font-size:11px;color:#6EE7B7;font-weight:700;opacity:0;transition:opacity .3s}
+.save-badge.show{opacity:1}
+
+/* ── BUTTONS ── */
+.btn{padding:6px 14px;border-radius:5px;border:none;font-family:inherit;font-size:12px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:#1E3A5F;color:#fff}
+.btn-primary:hover{background:#274f80}
+.btn-success{background:#16a34a;color:#fff}
+.btn-success:hover{background:#15803d}
+.btn-danger{background:#dc2626;color:#fff;font-size:11px;padding:4px 10px}
+.btn-danger:hover{background:#b91c1c}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #E8E9ED;position:sticky;top:50px;z-index:90}
+
+/* ── PAGE / SECTION ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── TABLE WRAPPER ── */
+.table-wrapper{overflow-x:auto;padding:16px}
+
+/* ── TABLE ── */
+table{border-collapse:collapse;white-space:nowrap}
+th,td{border:1px solid #D1D5DB;padding:0;vertical-align:middle}
+
+/* sticky */
+.s0{position:sticky;left:0;z-index:3;background:#fff;min-width:58px;width:58px}
+.s1{position:sticky;left:58px;z-index:3;background:#fff;min-width:108px;width:108px}
+
+/* header rows */
+.wh{background:#1E3A5F;color:#fff;font-size:12px;font-weight:700;text-align:center;padding:6px 8px}
+.dh{background:#2D4E7A;color:#CBD5E1;font-size:11px;text-align:center;padding:4px 8px}
+
+/* section labels */
+.sl{background:#1E3A5F;color:#fff;font-size:11px;font-weight:700;text-align:center;writing-mode:vertical-rl;text-orientation:mixed;padding:4px 2px}
+.sl-ap{background:#2D4E7A}
+
+/* metric labels */
+.ml{padding:3px 8px;font-size:12px;background:#F8FAFC;border-right:2px solid #D1D5DB}
+.ml.calc{background:#EFF6FF;font-style:italic}
+
+/* data cells */
+.dc{min-width:76px;width:76px;text-align:center}
+.cc{background:#EFF6FF;text-align:center;font-weight:700;padding:4px 6px;font-size:12px;color:#1E40AF}
+.ac{min-width:130px;width:130px}
+
+/* inputs */
+input.ci{width:100%;height:27px;border:none;text-align:center;font-family:inherit;font-size:12px;background:transparent;padding:0 4px;outline:none}
+input.ci:focus{background:#DBEAFE}
+input.ci[type=text]{text-align:left;padding:0 6px}
+input.ci[type=number]{-moz-appearance:textfield}
+input.ci[type=number]::-webkit-inner-spin-button,
+input.ci[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+
+.sep td{height:5px;background:#E8E9ED;border:none}
+
+/* current week column highlight */
+.cur-wk{background:#FFFBEB !important}
+.cur-wk input.ci{background:transparent}
+.cur-wk input.ci:focus{background:#FEF3C7}
+
+/* ── DASHBOARD ── */
+.db-page{padding:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.kpi-lbl{font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.kpi-sub{font-size:10px;color:#9CA3AF;margin-bottom:4px}
+.kpi-val{font-size:26px;font-weight:700;color:#1E3A5F;line-height:1.1}
+.kpi-wk{font-size:10px;color:#9CA3AF;margin-top:2px}
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:16px}
+.chart-card{background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.chart-ttl{font-size:12px;font-weight:700;color:#1E3A5F;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #E8E9ED}
+.chart-wrap{position:relative;height:210px}
+@media(max-width:720px){.chart-grid{grid-template-columns:1fr}}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:#6B7280;font-size:13px;gap:8px}
+.spinner{width:18px;height:18px;border:3px solid #E8E9ED;border-top-color:#1E3A5F;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.err-msg{background:#FEF2F2;border:1px solid #FECACA;color:#dc2626;padding:10px 14px;border-radius:6px;font-size:12px;margin:12px 16px}
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div class="modal-overlay" id="setup-modal">
+  <div class="modal-box">
+    <h2>⚙️ Supabase 接続設定 / Setup</h2>
+    <p>Supabase の Project URL と anon key を入力してください。<br>Enter your Supabase Project URL and anon key.</p>
+    <label>Project URL</label>
+    <input id="cfg-url" type="text" placeholder="https://xxxx.supabase.co">
+    <label>Anon Key</label>
+    <input id="cfg-key" type="text" placeholder="eyJhbGci...">
+    <div class="modal-err" id="cfg-err"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="saveConfig()">接続 / Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <h1>📋 TR Weekly</h1>
+  <button class="tab-btn active" id="tab-entry"   onclick="showPage('entry')">Data Entry</button>
+  <button class="tab-btn"        id="tab-dashboard" onclick="showPage('dashboard')">Dashboard</button>
+  <div class="header-spacer"></div>
+  <span class="save-badge" id="save-badge">✓ Saved</span>
+  <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="showSetup()">⚙</button>
+</header>
+
+<!-- DATA ENTRY PAGE -->
+<div id="page-entry" class="page active">
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="addWeek()">＋ 週追加 / Add Week</button>
+    <button class="btn btn-success" onclick="exportExcel()">📥 Excel Export</button>
+    <button class="btn btn-sm" style="background:#F3F4F6;color:#374151;border:1px solid #D1D5DB" onclick="loadData()">🔄 Reload</button>
+  </div>
+  <div id="entry-body"></div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page">
+  <div class="db-page">
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-ttl">Part ― Enrolled / Net / IN / OUT 推移</div>
+        <div class="chart-wrap"><canvas id="c-part-flow"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-ttl">Full ― Enrolled / Net / IN / OUT 推移</div>
+        <div class="chart-wrap"><canvas id="c-full-flow"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-ttl">Part ― Training Progress (DAY1 / DAY2 / OJT / Allocation)</div>
+        <div class="chart-wrap"><canvas id="c-part-prog"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-ttl">Full ― Training Progress (DAY1 / DAY2 / OJT / Allocation)</div>
+        <div class="chart-wrap"><canvas id="c-full-prog"></canvas></div>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="exportExcel()">📥 Excel Export</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// ★ ここに Supabase の値を設定してください / Set your Supabase credentials here
+// ═══════════════════════════════════════════════════
+const SUPABASE_URL      = https://qttvghfhzzqtqcnjwgbw.supabase.co
+const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dHZnaGZoenpxdHFjbmp3Z2J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjMzOTksImV4cCI6MjA5NjczOTM5OX0.uGJCJ1lDgA0QskwySaULmHxvVCRcs4NHGVD2WLJD_8U
+// ═══════════════════════════════════════════════════
+
+// CONFIG (fallback: UI入力 / UI input)
+const CFG_KEY = 'tr_supabase_cfg';
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { return {}; }
+}
+function saveConfig() {
+  const url = document.getElementById('cfg-url').value.trim();
+  const key = document.getElementById('cfg-key').value.trim();
+  const err = document.getElementById('cfg-err');
+  if (!url || !key) { err.textContent = 'URL と Key を入力してください。'; return; }
+  if (!url.startsWith('https://')) { err.textContent = 'URL は https:// で始まる必要があります。'; return; }
+  err.textContent = '';
+  localStorage.setItem(CFG_KEY, JSON.stringify({ url, key }));
+  document.getElementById('setup-modal').style.display = 'none';
+  initSupabase(url, key);
+  loadData();
+}
+function showSetup() {
+  const cfg = getConfig();
+  document.getElementById('cfg-url').value = cfg.url || '';
+  document.getElementById('cfg-key').value = cfg.key || '';
+  document.getElementById('cfg-err').textContent = '';
+  document.getElementById('setup-modal').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════
+let sb = null;
+
+function initSupabase(url, key) {
+  sb = supabase.createClient(url, key);
+}
+
+// ═══════════════════════════════════════════════════
+// DATA MODEL
+// ═══════════════════════════════════════════════════
+let weeks = []; // local cache
+
+function dbToWeek(row) {
+  return {
+    weekNum: row.week_num,
+    date: row.week_date,
+    part: {
+      hrList:     row.part_hr_list,
+      day1:       row.part_day1,
+      day2:       row.part_day2,
+      ojt:        row.part_ojt,
+      allocation: row.part_alloc,
+      enrolled:   row.part_enrolled,
+      inflow:     row.part_in,
+      outflow:    row.part_out,
+    },
+    full: {
+      hrList:     row.full_hr_list,
+      day1:       row.full_day1,
+      day2:       row.full_day2,
+      ojt:        row.full_ojt,
+      allocation: row.full_alloc,
+      enrolled:   row.full_enrolled,
+      inflow:     row.full_in,
+      outflow:    row.full_out,
+    },
+    actionPlan: Array.isArray(row.action_plan) ? row.action_plan : ['','','','','',''],
+  };
+}
+
+function weekToDb(w) {
+  return {
+    week_num:     w.weekNum,
+    week_date:    w.date,
+    part_hr_list: num(w.part.hrList),
+    part_day1:    num(w.part.day1),
+    part_day2:    num(w.part.day2),
+    part_ojt:     num(w.part.ojt),
+    part_alloc:   num(w.part.allocation),
+    part_enrolled:num(w.part.enrolled),
+    part_in:      num(w.part.inflow),
+    part_out:     num(w.part.outflow),
+    full_hr_list: num(w.full.hrList),
+    full_day1:    num(w.full.day1),
+    full_day2:    num(w.full.day2),
+    full_ojt:     num(w.full.ojt),
+    full_alloc:   num(w.full.allocation),
+    full_enrolled:num(w.full.enrolled),
+    full_in:      num(w.full.inflow),
+    full_out:     num(w.full.outflow),
+    action_plan:  w.actionPlan,
+  };
+}
+
+function num(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+function calcNet(s) {
+  const e = num(s.enrolled), i = num(s.inflow), o = num(s.outflow);
+  if (e === null) return null;
+  return e + (i || 0) - (o || 0);
+}
+
+// ═══════════════════════════════════════════════════
+// DB OPERATIONS
+// ═══════════════════════════════════════════════════
+async function loadData() {
+  if (!sb) return;
+  showLoading();
+  const { data, error } = await sb.from('tr_weekly').select('*').order('week_num');
+  if (error) { showError(error.message); return; }
+  weeks = (data || []).map(dbToWeek);
+  renderTable();
+}
+
+let saveTimer = null;
+async function saveWeek(wi) {
+  if (!sb) return;
+  const { error } = await sb.from('tr_weekly')
+    .upsert(weekToDb(weeks[wi]), { onConflict: 'week_num' });
+  if (error) { console.error(error); return; }
+  flashSaved();
+}
+
+function debounceSave(wi) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveWeek(wi), 600);
+}
+
+async function addWeek() {
+  if (!sb) return;
+  const last = weeks[weeks.length - 1];
+  const d = new Date(last.date);
+  d.setDate(d.getDate() + 7);
+  const newW = {
+    weekNum: last.weekNum + 1,
+    date: d.toISOString().split('T')[0],
+    part: { hrList:'', day1:'', day2:'', ojt:'', allocation:'', enrolled:'', inflow:'', outflow:'' },
+    full: { hrList:'', day1:'', day2:'', ojt:'', allocation:'', enrolled:'', inflow:'', outflow:'' },
+    actionPlan: ['','','','','',''],
+  };
+  const { error } = await sb.from('tr_weekly')
+    .insert(weekToDb(newW));
+  if (error) { showError(error.message); return; }
+  weeks.push(newW);
+  renderTable();
+  setTimeout(() => {
+    const w = document.querySelector('.table-wrapper');
+    if (w) w.scrollLeft = w.scrollWidth;
+  }, 60);
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════════════
+const METRICS = [
+  { key:'hrList',     label:'HR list',    calc:false },
+  { key:'day1',       label:'DAY1',       calc:false },
+  { key:'day2',       label:'DAY2',       calc:false },
+  { key:'ojt',        label:'OJT',        calc:false },
+  { key:'allocation', label:'Allocation', calc:false },
+  { key:'enrolled',   label:'Enrolled',   calc:false },
+  { key:'inflow',     label:'IN',         calc:false },
+  { key:'outflow',    label:'OUT',        calc:false },
+  { key:'net',        label:'Net',        calc:true  },
+];
+const AP_LABELS = ['①','②','③','④','⑤','⑥'];
+const N = METRICS.length;
+
+function fmt(v) { return (v === null || v === undefined || v === '') ? '' : v; }
+function fmtDate(s) { const d = new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
+
+function renderTable() {
+  const body = document.getElementById('entry-body');
+  const n = weeks.length;
+  const lastWi = n - 1;
+
+  let h = '<div class="table-wrapper"><table><thead>';
+
+  // Week number row
+  h += '<tr>';
+  h += `<th class="s0 wh" rowspan="2">Cat.</th>`;
+  h += `<th class="s1 wh" rowspan="2" style="left:58px">指標 / Metric</th>`;
+  weeks.forEach((w, wi) => {
+    const cur = wi === lastWi ? ' cur-wk' : '';
+    h += `<th class="wh dc${cur}">W${w.weekNum}</th>`;
+  });
+  h += '</tr>';
+
+  // Date row
+  h += '<tr>';
+  weeks.forEach((w, wi) => {
+    const cur = wi === lastWi ? ' cur-wk' : '';
+    h += `<th class="dh dc${cur}">${fmtDate(w.date)}</th>`;
+  });
+  h += '</tr>';
+  h += '</thead><tbody>';
+
+  // Part & Full sections
+  ['part','full'].forEach(sec => {
+    METRICS.forEach((m, ri) => {
+      h += '<tr>';
+      if (ri === 0) {
+        h += `<td class="s0 sl" rowspan="${N}" style="left:0">${sec === 'part' ? 'Part' : 'Full'}</td>`;
+      }
+      const mlCls = m.calc ? 'ml calc' : 'ml';
+      h += `<td class="s1 ${mlCls}" style="left:58px">${m.label}</td>`;
+      weeks.forEach((w, wi) => {
+        const cur = wi === lastWi ? ' cur-wk' : '';
+        if (m.calc) {
+          const net = calcNet(w[sec]);
+          h += `<td class="cc dc${cur}" data-wi="${wi}" data-sec="${sec}">${net === null ? '' : net}</td>`;
+        } else {
+          const v = fmt(w[sec][m.key]);
+          h += `<td class="dc${cur}"><input class="ci" type="number" min="0" value="${v}"
+            data-wi="${wi}" data-sec="${sec}" data-key="${m.key}"
+            onchange="onCell(this)" oninput="onCell(this)"></td>`;
+        }
+      });
+      h += '</tr>';
+    });
+    h += `<tr class="sep"><td colspan="${n+2}"></td></tr>`;
+  });
+
+  // Action Plan header
+  h += '<tr>';
+  h += `<td class="s0 sl sl-ap" rowspan="${AP_LABELS.length + 1}" style="left:0">Action<br>Plan</td>`;
+  h += `<td class="s1 dh" style="left:58px;text-align:left;padding-left:8px">Date</td>`;
+  weeks.forEach((w, wi) => {
+    const cur = wi === lastWi ? ' cur-wk' : '';
+    h += `<td class="dh${cur}">${fmtDate(w.date)}</td>`;
+  });
+  h += '</tr>';
+
+  AP_LABELS.forEach((lbl, li) => {
+    h += '<tr>';
+    h += `<td class="s1 ml" style="left:58px;text-align:center;font-weight:700">${lbl}</td>`;
+    weeks.forEach((w, wi) => {
+      const cur = wi === lastWi ? ' cur-wk' : '';
+      const v = (w.actionPlan[li] || '').replace(/"/g,'&quot;');
+      h += `<td class="ac${cur}"><input class="ci" type="text" value="${v}"
+        data-wi="${wi}" data-ap="${li}"
+        onchange="onAp(this)" oninput="onAp(this)"></td>`;
+    });
+    h += '</tr>';
+  });
+
+  h += '</tbody></table></div>';
+  body.innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════
+// CELL EVENTS
+// ═══════════════════════════════════════════════════
+function onCell(input) {
+  const wi = +input.dataset.wi;
+  const sec = input.dataset.sec;
+  const key = input.dataset.key;
+  const v = input.value === '' ? '' : parseFloat(input.value);
+  weeks[wi][sec][key] = v;
+  // Update net cell
+  const net = calcNet(weeks[wi][sec]);
+  const nc = document.querySelector(`td.cc[data-wi="${wi}"][data-sec="${sec}"]`);
+  if (nc) nc.textContent = net === null ? '' : net;
+  debounceSave(wi);
+}
+
+function onAp(input) {
+  const wi = +input.dataset.wi;
+  const li = +input.dataset.ap;
+  weeks[wi].actionPlan[li] = input.value;
+  debounceSave(wi);
+}
+
+// ═══════════════════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════════════════
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const aoa = [];
+
+  // Header rows
+  aoa.push(['', '', ...weeks.map(w => `W${w.weekNum}`)]);
+  aoa.push(['', '', ...weeks.map(w => w.date)]);
+  aoa.push([]);
+
+  [['Part','part'],['Full','full']].forEach(([label, sec]) => {
+    METRICS.forEach(m => {
+      const row = [m.calc ? '' : (m.key === 'hrList' ? label : ''), m.label];
+      weeks.forEach(w => {
+        row.push(m.calc ? (calcNet(w[sec]) ?? '') : (fmt(w[sec][m.key])));
+      });
+      aoa.push(row);
+    });
+    aoa.push([]);
+  });
+
+  // Action Plan
+  aoa.push(['', 'Action Plan', ...weeks.map(w => w.date)]);
+  AP_LABELS.forEach((lbl, li) => {
+    aoa.push(['', lbl, ...weeks.map(w => w.actionPlan[li] || '')]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch:8 }, { wch:14 }, ...weeks.map(() => ({ wch:12 }))];
+  XLSX.utils.book_append_sheet(wb, ws, 'TR Weekly');
+  XLSX.writeFile(wb, `TR_Weekly_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+const charts = {};
+const CHART_OPT = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } },
+  scales: {
+    x: { ticks:{ font:{size:10} } },
+    y: { beginAtZero:true, ticks:{ font:{size:10} } }
+  }
+};
+
+function renderDashboard() {
+  renderKPIs();
+  renderCharts();
+}
+
+function renderKPIs() {
+  if (!weeks.length) return;
+  const w = weeks[weeks.length - 1];
+  const cards = [
+    { lbl:'Part Enrolled',    sub:'研修生数 (Part)',  val: w.part.enrolled ?? '-' },
+    { lbl:'Part Net',         sub:'純増減 (Part)',    val: calcNet(w.part) ?? '-' },
+    { lbl:'Full Enrolled',    sub:'研修生数 (Full)',  val: w.full.enrolled ?? '-' },
+    { lbl:'Full Net',         sub:'純増減 (Full)',    val: calcNet(w.full) ?? '-' },
+    { lbl:'Part HR List',     sub:'HR台帳 (Part)',    val: w.part.hrList ?? '-' },
+    { lbl:'Full HR List',     sub:'HR台帳 (Full)',    val: w.full.hrList ?? '-' },
+  ];
+  document.getElementById('kpi-grid').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-lbl">${c.lbl}</div>
+      <div class="kpi-sub">${c.sub}</div>
+      <div class="kpi-val">${c.val}</div>
+      <div class="kpi-wk">W${w.weekNum} · ${fmtDate(w.date)}</div>
+    </div>`).join('');
+}
+
+function mkLine(canvasId, datasets) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const labels = weeks.map(w => `W${w.weekNum}\n${fmtDate(w.date)}`);
+  charts[canvasId] = new Chart(
+    document.getElementById(canvasId).getContext('2d'),
+    { type:'line', data:{ labels, datasets }, options: CHART_OPT }
+  );
+}
+function mkBar(canvasId, datasets) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const labels = weeks.map(w => `W${w.weekNum}`);
+  charts[canvasId] = new Chart(
+    document.getElementById(canvasId).getContext('2d'),
+    { type:'bar', data:{ labels, datasets }, options: CHART_OPT }
+  );
+}
+
+function renderCharts() {
+  const p = w => weeks.map(wk => num(wk.part[w]));
+  const f = w => weeks.map(wk => num(wk.full[w]));
+  const pNet = () => weeks.map(wk => calcNet(wk.part));
+  const fNet = () => weeks.map(wk => calcNet(wk.full));
+
+  const lineStyle = (label, data, color, dash) => ({
+    label, data, borderColor:color, backgroundColor:color+'22',
+    tension:.3, fill:false, borderDash: dash||[], pointRadius:3
+  });
+  const barStyle = (label, data, color) => ({
+    label, data, backgroundColor:color
+  });
+
+  mkLine('c-part-flow', [
+    lineStyle('Enrolled',  p('enrolled'), '#1E3A5F'),
+    lineStyle('Net',       pNet(),        '#2563EB', [5,3]),
+    lineStyle('IN',        p('inflow'),   '#16a34a'),
+    lineStyle('OUT',       p('outflow'),  '#dc2626'),
+  ]);
+  mkLine('c-full-flow', [
+    lineStyle('Enrolled',  f('enrolled'), '#7C3AED'),
+    lineStyle('Net',       fNet(),        '#A855F7', [5,3]),
+    lineStyle('IN',        f('inflow'),   '#059669'),
+    lineStyle('OUT',       f('outflow'),  '#D97706'),
+  ]);
+  mkBar('c-part-prog', [
+    barStyle('DAY1',       p('day1'),       '#60A5FA'),
+    barStyle('DAY2',       p('day2'),       '#34D399'),
+    barStyle('OJT',        p('ojt'),        '#FCD34D'),
+    barStyle('Allocation', p('allocation'), '#F87171'),
+  ]);
+  mkBar('c-full-prog', [
+    barStyle('DAY1',       f('day1'),       '#818CF8'),
+    barStyle('DAY2',       f('day2'),       '#6EE7B7'),
+    barStyle('OJT',        f('ojt'),        '#FDE68A'),
+    barStyle('Allocation', f('allocation'), '#FCA5A5'),
+  ]);
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`page-${p}`).classList.add('active');
+  document.getElementById(`tab-${p}`).classList.add('active');
+  if (p === 'dashboard') renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════
+function showLoading() {
+  document.getElementById('entry-body').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Loading...</div>';
+}
+function showError(msg) {
+  document.getElementById('entry-body').innerHTML =
+    `<div class="err-msg">⚠️ Error: ${msg}<br>設定を確認してください → ⚙ ボタン</div>`;
+}
+function flashSaved() {
+  const b = document.getElementById('save-badge');
+  b.classList.add('show');
+  setTimeout(() => b.classList.remove('show'), 1800);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+(function init() {
+  // ① 定数が設定済みならそのまま起動
+  const hardcoded = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+  if (hardcoded) {
+    document.getElementById('setup-modal').style.display = 'none';
+    initSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+    loadData();
+    return;
+  }
+  // ② localStorage に保存済みの場合
+  const cfg = getConfig();
+  if (cfg.url && cfg.key) {
+    document.getElementById('setup-modal').style.display = 'none';
+    initSupabase(cfg.url, cfg.key);
+    loadData();
+  } else {
+    document.getElementById('cfg-url').value = '';
+    document.getElementById('cfg-key').value = '';
+    // モーダル表示のまま
+  }
+})();
+</script>
+</body>
+</html>
