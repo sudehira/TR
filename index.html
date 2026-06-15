@@ -171,11 +171,11 @@ input.ci[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
         <div class="chart-wrap"><canvas id="c-full-flow"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-ttl">Part ― Training Progress (DAY1 / DAY2 / OJT / Allocation)</div>
+        <div class="chart-ttl">Part ― Training Progress (HR list / DAY1 / DAY2 / OJT / Allocation)</div>
         <div class="chart-wrap"><canvas id="c-part-prog"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-ttl">Full ― Training Progress (DAY1 / DAY2 / OJT / Allocation)</div>
+        <div class="chart-ttl">Full ― Training Progress (HR list / DAY1 / DAY2 / OJT / Allocation)</div>
         <div class="chart-wrap"><canvas id="c-full-prog"></canvas></div>
       </div>
     </div>
@@ -420,7 +420,7 @@ function renderTable() {
   h += `<td class="s1 dh" style="left:58px;text-align:left;padding-left:8px">Date</td>`;
   weeks.forEach((w, wi) => {
     const cur = wi === lastWi ? ' cur-wk' : '';
-    h += `<td class="dh${cur}">${fmtDate(w.date)}</td>`;
+    h += `<td class="dh${cur}">${fmtDate(w.date)}</th>`;
   });
   h += '</tr>';
 
@@ -544,7 +544,7 @@ function renderDashboard() {
 function renderKPIs() {
   if (!weeks.length) return;
 
-  // 全項目入力済みの週のみ（HRlist,Day1,Day2,OJT,Allocation が both part/full どnon-null）
+  // 全項目入力済みの週のみ（HRlist,Day1,Day2,OJT,Allocation が both part/full で non-null）
   const done = weeks.filter(w =>
     num(w.part.hrList)!==null && num(w.part.day1)!==null &&
     num(w.part.day2)!==null  && num(w.part.ojt)!==null  &&
@@ -651,12 +651,14 @@ function renderCharts() {
 
   // Training Progress — 折れ線に変更
   mkLine('c-part-prog', [
+    ls('HR list',    p('hrList'),     '#0EA5E9'),
     ls('DAY1',       p('day1'),       '#2563EB'),
     ls('DAY2',       p('day2'),       '#16a34a'),
     ls('OJT',        p('ojt'),        '#D97706'),
     ls('Allocation', p('allocation'), '#dc2626'),
   ]);
   mkLine('c-full-prog', [
+    ls('HR list',    f('hrList'),     '#6366F1'),
     ls('DAY1',       f('day1'),       '#7C3AED'),
     ls('DAY2',       f('day2'),       '#059669'),
     ls('OJT',        f('ojt'),        '#F59E0B'),
@@ -696,7 +698,7 @@ function flashSaved() {
 // INIT
 // ═══════════════════════════════════════════════════
 (function init() {
-  // ① 定数が設定済みならそのみ���起動
+  // ① 定数が設定済みならそのまま起動
   const hardcoded = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
   if (hardcoded) {
     document.getElementById('setup-modal').style.display = 'none';
@@ -712,10 +714,4 @@ function flashSaved() {
     loadData();
   } else {
     document.getElementById('cfg-url').value = '';
-    document.getElementById('cfg-key').value = '';
-    // モーダル表示のまま
-  }
-})();
-</script>
-</body>
-</html>
+  
