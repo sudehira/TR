@@ -561,16 +561,16 @@ function renderKPIs() {
   const S = (sec, key) => done.reduce((a, w) => a + (num(w[sec][key]) || 0), 0);
 
   const COLS = [
-    { key:'hrList',     lbl:'HR List'    },
-    { key:'day1',       lbl:'DAY1'       },
-    { key:'day2',       lbl:'DAY2'       },
+    { key:'hrList',     lbl:'HR'    },
+    { key:'day1',       lbl:'D1'       },
+    { key:'day2',       lbl:'D2'       },
     { key:'ojt',        lbl:'OJT'        },
-    { key:'allocation', lbl:'Allocation' },
+    { key:'allocation', lbl:'Alloc' },
   ];
 
-  const th = 'padding:5px 6px;background:#1E3A5F;color:#fff;font-size:10px;font-weight:700;text-align:center';
-  const td = 'padding:6px 6px;text-align:center;font-size:14px;font-weight:700;color:#1E3A5F';
-  const tdL = 'padding:6px 6px;font-size:11px;font-weight:700;color:#374151;text-align:center';
+  const th = 'padding:8px 4px;background:#1E3A5F;color:#fff;font-size:11px;font-weight:700;text-align:center';
+  const td = 'padding:8px 4px;text-align:center;font-size:16px;font-weight:700;color:#1E3A5F;line-height:1.2';
+  const tdL = 'padding:8px 6px;font-size:12px;font-weight:700;color:#374151;text-align:center';  const pct = 'display:block;font-size:10px;font-weight:500;color:#6B7280;margin-top:2px';
 
   document.getElementById('kpi-grid').innerHTML = `
     <div style="background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
@@ -590,7 +590,7 @@ function renderKPIs() {
           ${['part','full'].map((sec,si)=>`
           <tr style="background:${si===0?'#F8FAFC':'#fff'};border-top:1px solid #E8E9ED">
             <td style="${tdL}">${sec==='part'?'Part':'Full'}</td>
-            ${COLS.map(c=>`<td style="${td}">${S(sec,c.key).toLocaleString()}</td>`).join('')}
+            ${COLS.map((c,ci)=>{const v=S(sec,c.key),h=S(sec,'hrList');return `<td style="${td}">${v.toLocaleString()}${ci>0&&h>0?`<span style="${pct}">${Math.round(v/h*100)}%</span>`:''}</td>`;}).join('')}
           </tr>`).join('')}
         </tbody>
       </table>
