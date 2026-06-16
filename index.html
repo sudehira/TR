@@ -568,22 +568,22 @@ function renderKPIs() {
     { key:'allocation', lbl:'Allocation' },
   ];
 
-  const th = 'padding:6px 10px;background:#1E3A5F;color:#fff;font-size:11px;font-weight:700;white-space:nowrap';
-  const td = 'padding:8px 10px;text-align:right;font-size:18px;font-weight:700;color:#1E3A5F;white-space:nowrap';
-  const tdL = 'padding:8px 10px;font-size:12px;font-weight:700;color:#374151;white-space:nowrap';
+  const th = 'padding:5px 6px;background:#1E3A5F;color:#fff;font-size:10px;font-weight:700;text-align:center';
+  const td = 'padding:6px 6px;text-align:center;font-size:14px;font-weight:700;color:#1E3A5F';
+  const tdL = 'padding:6px 6px;font-size:11px;font-weight:700;color:#374151;text-align:center';
 
   document.getElementById('kpi-grid').innerHTML = `
-    <div style="background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow-x:auto">
+    <div style="background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
         <span style="background:#1E3A5F;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">累計 Cumulative</span>
         <span style="font-size:12px;font-weight:700;color:#1E3A5F">${period}</span>
         <span style="font-size:11px;color:#9CA3AF;margin-left:auto">${done.length} 週 / weeks (全項目入力済)</span>
       </div>
-      <table style="border-collapse:collapse;table-layout:auto;min-width:100%">
+      <table style="border-collapse:collapse;table-layout:fixed;width:100%">
         <thead>
           <tr>
-            <th style="${th};text-align:left;border-radius:6px 0 0 6px">区分</th>
-            ${COLS.map((c,i)=>`<th style="${th};text-align:right${i===COLS.length-1?';border-radius:0 6px 6px 0':''}">${c.lbl}</th>`).join('')}
+            <th style="${th};border-radius:6px 0 0 6px">区分</th>
+            ${COLS.map((c,i)=>`<th style="${th}${i===COLS.length-1?';border-radius:0 6px 6px 0':''}">${c.lbl}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
