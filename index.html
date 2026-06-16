@@ -568,18 +568,18 @@ function renderKPIs() {
     { key:'allocation', lbl:'Alloc' },
   ];
 
-  const th = 'padding:8px 4px;background:#1E3A5F;color:#fff;font-size:11px;font-weight:700;text-align:center';
-  const td = 'padding:8px 4px;text-align:center;font-size:16px;font-weight:700;color:#1E3A5F;line-height:1.2';
-  const tdL = 'padding:8px 6px;font-size:12px;font-weight:700;color:#374151;text-align:center';  const pct = 'display:block;font-size:10px;font-weight:500;color:#6B7280;margin-top:2px';
+  const th = 'padding:10px 8px;background:#1E3A5F;color:#fff;font-size:11px;font-weight:700;text-align:center;min-width:90px';
+  const td = 'padding:10px 8px;text-align:center;font-size:16px;font-weight:700;color:#1E3A5F;line-height:1.2;min-width:90px';
+  const tdL = 'padding:10px 12px;font-size:12px;font-weight:700;color:#374151;text-align:center;min-width:60px';  const pct = 'display:block;font-size:10px;font-weight:500;color:#6B7280;margin-top:2px';
 
   document.getElementById('kpi-grid').innerHTML = `
-    <div style="background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#fff;border:1px solid #E8E9ED;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow-x:auto">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
         <span style="background:#1E3A5F;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">累計 Cumulative</span>
         <span style="font-size:12px;font-weight:700;color:#1E3A5F">${period}</span>
         <span style="font-size:11px;color:#9CA3AF;margin-left:auto">${done.length} 週 / weeks (全項目入力済)</span>
       </div>
-      <table style="border-collapse:collapse;table-layout:fixed;width:100%">
+      <table style="border-collapse:collapse;table-layout:auto">
         <thead>
           <tr>
             <th style="${th};border-radius:6px 0 0 6px">区分</th>
@@ -616,9 +616,9 @@ const FLOW_OPT = {
   scales: {
     x:  { ticks:{ font:{size:10} }, offset:true },
     y:  { beginAtZero:true, ticks:{ font:{size:10} },
-          title:{ display:true, text:'Net / IN / OUT', font:{size:9}, color:'#6B7280' } },
+          title:{ display:true, text:'IN / OUT', font:{size:9}, color:'#6B7280' } },
     y2: { beginAtZero:true, position:'right', ticks:{ font:{size:10} },
-          title:{ display:true, text:'Enrolled', font:{size:9}, color:'#6B7280' },
+          title:{ display:true, text:'Enrolled / Net', font:{size:9}, color:'#6B7280' },
           grid:{ drawOnChartArea:false } }
   }
 };
@@ -638,13 +638,13 @@ function renderCharts() {
   // Enrolled/Net/IN/OUT — 第二軸 (Enrolled → y2)
   mkLine('c-part-flow', [
     ls('Enrolled', p('enrolled'), '#1E3A5F', [],    'y2'),
-    ls('Net',      pNet(),        '#2563EB', [5,3], 'y'),
+    ls('Net',      pNet(),        '#2563EB', [5,3], 'y2'),
     ls('IN',       p('inflow'),   '#16a34a', [],    'y'),
     ls('OUT',      p('outflow'),  '#dc2626', [],    'y'),
   ], FLOW_OPT);
   mkLine('c-full-flow', [
     ls('Enrolled', f('enrolled'), '#7C3AED', [],    'y2'),
-    ls('Net',      fNet(),        '#A855F7', [5,3], 'y'),
+    ls('Net',      fNet(),        '#A855F7', [5,3], 'y2'),
     ls('IN',       f('inflow'),   '#059669', [],    'y'),
     ls('OUT',      f('outflow'),  '#D97706', [],    'y'),
   ], FLOW_OPT);
