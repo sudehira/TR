@@ -122,7 +122,7 @@ input.ci[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 <body>
 
 <!-- SETUP MODAL -->
-<div class="modal-overlay" id="setup-modal">
+<div class="modal-overlay" id="setup-modal" style="display:none">
   <div class="modal-box">
     <h2>⚙️ Supabase 接続設定 / Setup</h2>
     <p>Supabase の Project URL と anon key を入力してください。<br>Enter your Supabase Project URL and anon key.</p>
@@ -420,7 +420,7 @@ function renderTable() {
   h += `<td class="s1 dh" style="left:58px;text-align:left;padding-left:8px">Date</td>`;
   weeks.forEach((w, wi) => {
     const cur = wi === lastWi ? ' cur-wk' : '';
-    h += `<td class="dh${cur}">${fmtDate(w.date)}</th>`;
+    h += `<td class="dh${cur}">${fmtDate(w.date)}</td>`;
   });
   h += '</tr>';
 
@@ -607,7 +607,7 @@ function mkLine(canvasId, datasets, opt) {
   );
 }
 
-// 第二軸付きフローチャート用オプション
+// 第二軸$��きフローチャート用オプション
 const FLOW_OPT = {
   responsive: true,
   maintainAspectRatio: false,
@@ -713,5 +713,4 @@ function flashSaved() {
     initSupabase(cfg.url, cfg.key);
     loadData();
   } else {
-    document.getElementById('cfg-url').value = '';
-  
+    document.getElementById('cfg
